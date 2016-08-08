@@ -9,21 +9,24 @@ namespace Microsoft.AspNetCore.Hosting.Internal
 {
     public class StartupMethods
     {
-        internal static Func<IServiceCollection, IServiceProvider> DefaultBuildServiceProvider = s => s.BuildServiceProvider();
-
-        public StartupMethods(Action<IApplicationBuilder> configure)
-            : this(configure, configureServices: null)
-        {
-        }
-
         public StartupMethods(Action<IApplicationBuilder> configure, Func<IServiceCollection, IServiceProvider> configureServices)
         {
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
+            if (configureServices == null)
+            {
+                throw new ArgumentNullException(nameof(configureServices));
+            }
+
             ConfigureDelegate = configure;
-            ConfigureServicesDelegate = configureServices ?? DefaultBuildServiceProvider;
+            ConfigureServicesDelegate = configureServices;
         }
 
         public Func<IServiceCollection, IServiceProvider> ConfigureServicesDelegate { get; }
-        public Action<IApplicationBuilder> ConfigureDelegate { get; }
 
+        public Action<IApplicationBuilder> ConfigureDelegate { get; }
     }
 }
