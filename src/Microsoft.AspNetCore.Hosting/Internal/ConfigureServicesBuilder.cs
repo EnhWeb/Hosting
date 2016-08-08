@@ -10,44 +10,42 @@ namespace Microsoft.AspNetCore.Hosting.Internal
 {
     public class ConfigureServicesBuilder
     {
-        public ConfigureServicesBuilder(MethodInfo configureServices)
+        public ConfigureServicesBuilder(MethodInfo methodInfo)
         {
-            if (configureServices == null)
+            if (methodInfo == null)
             {
-                throw new ArgumentNullException(nameof(configureServices));
+                throw new ArgumentNullException(nameof(methodInfo));
             }
 
-            // Only support IServiceCollection parameters
-            var parameters = configureServices.GetParameters();
-            if (parameters.Length > 1 ||
-                parameters.Any(p => p.ParameterType != typeof(IServiceCollection)))
-            {
-                throw new InvalidOperationException("The ConfigureServices method must either be parameterless or take only one parameter of type IServiceCollection.");
-            }
-
-            MethodInfo = configureServices;
+            MethodInfo = methodInfo;
         }
 
         public MethodInfo MethodInfo { get; }
 
         public Func<IServiceCollection, IServiceProvider> Build(object instance) => services => Invoke(instance, services);
 
-        private IServiceProvider Invoke(object instance, IServiceCollection exportServices)
+        private IServiceProvider Invoke(object instance, IServiceCollection services)
         {
-            if (exportServices == null)
+            if (services == null)
             {
-                throw new ArgumentNullException(nameof(exportServices));
+                throw new ArgumentNullException(nameof(services));
             }
 
-            var parameters = new object[MethodInfo.GetParameters().Length];
+            var parameters = MethodInfo.GetParameters();
 
-            // Ctor ensures we have at most one IServiceCollection parameter
-            if (parameters.Length > 0)
+            if (parameters.Length > 1 || parameters.Any(p => p.ParameterType != typeof(IServiceCollection)))
             {
-                parameters[0] = exportServices;
+                throw new InvalidOperationException("The ConfigureServices method must either be parameterless or take only one parameter of type IServiceCollection.");
             }
 
-            return MethodInfo.Invoke(instance, parameters) as IServiceProvider ?? exportServices.BuildServiceProvider();
+            var arguments = new object[parameters.Length];
+
+            if (arguments.Length > 0)
+            {
+                arguments[0] = services;
+            }
+
+            return MethodInfo.Invoke(instance, arguments) as IServiceProvider;
         }
     }
 }
