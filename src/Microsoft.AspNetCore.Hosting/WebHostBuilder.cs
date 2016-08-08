@@ -29,6 +29,7 @@ namespace Microsoft.AspNetCore.Hosting
 
         private IConfiguration _config;
         private ILoggerFactory _loggerFactory;
+        private IServiceProviderFactory _serviceProviderFactory;
         private WebHostOptions _options;
 
         /// <summary>
@@ -93,6 +94,17 @@ namespace Microsoft.AspNetCore.Hosting
             }
 
             _loggerFactory = loggerFactory;
+            return this;
+        }
+
+        public IWebHostBuilder UseServiceProviderFactory(IServiceProviderFactory serviceProviderFactory)
+        {
+            if (serviceProviderFactory == null)
+            {
+                throw new ArgumentNullException(nameof(serviceProviderFactory));
+            }
+
+            _serviceProviderFactory = serviceProviderFactory;
             return this;
         }
 
@@ -189,6 +201,13 @@ namespace Microsoft.AspNetCore.Hosting
 
             //This is required to add ILogger of T.
             services.AddLogging();
+
+            if (_serviceProviderFactory == null)
+            {
+                _serviceProviderFactory = new ServiceProviderFactory();
+            }
+
+            services.AddSingleton(_serviceProviderFactory);
 
             services.AddTransient<IApplicationBuilderFactory, ApplicationBuilderFactory>();
             services.AddTransient<IHttpContextFactory, HttpContextFactory>();

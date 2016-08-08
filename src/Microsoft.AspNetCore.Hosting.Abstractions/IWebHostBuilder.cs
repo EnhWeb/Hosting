@@ -24,6 +24,8 @@ namespace Microsoft.AspNetCore.Hosting
         /// <returns>The <see cref="IWebHostBuilder"/>.</returns>
         IWebHostBuilder UseLoggerFactory(ILoggerFactory loggerFactory);
 
+        IWebHostBuilder UseServiceProviderFactory(IServiceProviderFactory serviceProviderFactory);
+
         /// <summary>
         /// Specify the delegate that is used to configure the services of the web application.
         /// </summary>
