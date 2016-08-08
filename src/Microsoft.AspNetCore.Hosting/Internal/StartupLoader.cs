@@ -11,7 +11,7 @@ namespace Microsoft.AspNetCore.Hosting.Internal
 {
     public class StartupLoader
     {
-        public static StartupMethods LoadMethods(IServiceProvider services, Type startupType, string environmentName)
+        public static StartupMethods LoadMethods(IServiceProvider hostingServices, Type startupType, string environmentName)
         {
             var configureMethod = FindConfigureDelegate(startupType, environmentName);
             var servicesMethod = FindConfigureServicesDelegate(startupType, environmentName);
@@ -19,10 +19,45 @@ namespace Microsoft.AspNetCore.Hosting.Internal
             object instance = null;
             if (!configureMethod.MethodInfo.IsStatic || (servicesMethod != null && !servicesMethod.MethodInfo.IsStatic))
             {
-                instance = ActivatorUtilities.GetServiceOrCreateInstance(services, startupType);
+                instance = ActivatorUtilities.GetServiceOrCreateInstance(hostingServices, startupType);
             }
 
-            return new StartupMethods(configureMethod.Build(instance), servicesMethod?.Build(instance));
+            var configureServices = servicesMethod?.Build(instance);
+
+            var factory = hostingServices.GetRequiredService<IServiceProviderFactory>();
+
+            var configureContainer = new Func<IServiceCollection, IServiceProvider>(services =>
+            {
+                var applicationServices = configureServices?.Invoke(services);
+
+                if (applicationServices == null)
+                {
+                    var builder = factory.CreateContainerBuilder(services);
+
+                    if (builder == null)
+                    {
+                        throw new Exception(); // TODO: Better error message.
+                    }
+
+                    if (builder != services)
+                    {
+                        var containerMethod = FindConfigureContainerDelegate(startupType, environmentName);
+
+                        containerMethod?.Invoke(instance, builder, factory.ContainerBuilderType);
+                    }
+
+                    applicationServices = factory.CreateServiceProvider(builder);
+
+                    if (applicationServices == null)
+                    {
+                        throw new Exception(); // TODO: Better error message.
+                    }
+                }
+
+                return applicationServices;
+            });
+
+            return new StartupMethods(configureMethod.Build(instance), configureContainer);
         }
 
         public static Type FindStartupType(string startupAssemblyName, string environmentName)
@@ -88,6 +123,12 @@ namespace Microsoft.AspNetCore.Hosting.Internal
             var servicesMethod = FindMethod(startupType, "Configure{0}Services", environmentName, typeof(IServiceProvider), required: false)
                 ?? FindMethod(startupType, "Configure{0}Services", environmentName, typeof(void), required: false);
             return servicesMethod == null ? null : new ConfigureServicesBuilder(servicesMethod);
+        }
+
+        private static ConfigureContainerBuilder FindConfigureContainerDelegate(Type startupType, string environmentName)
+        {
+            var configureContainerMethod = FindMethod(startupType, "Configure{0}Container", environmentName, typeof(void), required: false);
+            return configureContainerMethod == null ? null : new ConfigureContainerBuilder(configureContainerMethod);
         }
 
         private static MethodInfo FindMethod(Type startupType, string methodName, string environmentName, Type returnType = null, bool required = true)
