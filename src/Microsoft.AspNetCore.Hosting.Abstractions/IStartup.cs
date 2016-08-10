@@ -9,7 +9,7 @@ namespace Microsoft.AspNetCore.Hosting
 {
     public interface IStartup
     {
-        IServiceProvider ConfigureServices(IServiceCollection services);
+        IServiceProvider ConfigureServices(IServiceCollection services, IServiceProviderFactory factory);
 
         void Configure(IApplicationBuilder app);
     }

@@ -114,7 +114,8 @@ namespace Microsoft.AspNetCore.Hosting.Internal
             if (_applicationServices == null)
             {
                 EnsureStartup();
-                _applicationServices = _startup.ConfigureServices(_applicationServiceCollection);
+                var factory = _applicationServices.GetRequiredService<IServiceProviderFactory>();
+                _applicationServices = _startup.ConfigureServices(_applicationServiceCollection, factory);
             }
         }
 

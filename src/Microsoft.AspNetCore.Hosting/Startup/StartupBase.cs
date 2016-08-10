@@ -12,6 +12,11 @@ namespace Microsoft.AspNetCore.Hosting
     {
         public abstract void Configure(IApplicationBuilder app);
 
+        IServiceProvider IStartup.ConfigureServices(IServiceCollection services, IServiceProviderFactory factory)
+        {
+            return ConfigureServices(services);
+        }
+
         public virtual IServiceProvider ConfigureServices(IServiceCollection services)
         {
             return services.BuildServiceProvider();
@@ -20,32 +25,20 @@ namespace Microsoft.AspNetCore.Hosting
 
     public abstract class StartupBase<TBuilder> : IStartup
     {
-        protected StartupBase(IServiceProviderFactory factory)
+        IServiceProvider IStartup.ConfigureServices(IServiceCollection services, IServiceProviderFactory factory)
         {
-            if (factory == null)
-            {
-                throw new ArgumentNullException(nameof(factory));
-            }
-
             if (!IsCompatible(factory))
             {
                 throw new ArgumentException("Startup class is not compatible with the current IServiceProviderFactory.", nameof(factory));
             }
 
-            Factory = factory;
-        }
-
-        private IServiceProviderFactory Factory { get; }
-
-        IServiceProvider IStartup.ConfigureServices(IServiceCollection services)
-        {
             ConfigureServices(services);
 
-            var builder = Factory.CreateContainerBuilder(services);
+            var builder = factory.CreateContainerBuilder(services);
 
             ConfigureContainer((TBuilder) builder);
 
-            return Factory.CreateServiceProvider(builder);
+            return factory.CreateServiceProvider(builder);
         }
 
         protected virtual void ConfigureServices(IServiceCollection services)

@@ -36,7 +36,7 @@ namespace Microsoft.AspNetCore.Hosting
             }
         }
 
-        public IServiceProvider ConfigureServices(IServiceCollection services)
+        public IServiceProvider ConfigureServices(IServiceCollection services, IServiceProviderFactory factory)
         {
             try
             {
